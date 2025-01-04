@@ -1,49 +1,38 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.datasets import load_digits
-from scipy.cluster.hierarchy import dendrogram, linkage
+from sklearn import datasets
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
+import numpy as np
 
-digits = load_digits()
-np.random.seed(0)
-idx = np.random.choice(range(len(digits.images)), 30)
-X_image = digits.data[idx]
-images = digits.images[idx]
+digits = datasets.load_digits()
 
+X_train, X_test, y_train, y_test = train_test_split(
+    digits.data, digits.target, test_size=0.2, random_state=42
+)
 
-plt.figure(figsize=(6, 3))
-for i in range(30):
-    plt.subplot(3, 10, i + 1)
-    plt.imshow(images[i], cmap=plt.cm.bone)
-    plt.grid(False)
-    plt.xticks(())
-    plt.yticks(())
-    plt.title(i)
-plt.show()
+# Initialiser le classifieur SVC (One-vs-One)
+classifier = SVC(gamma=0.001, C=100.)
 
+classifier.fit(X_train, y_train)
 
-# Compute hierarchical clustering
-Z = linkage(X_image, 'ward')
+y_pred = classifier.predict(X_test)
 
-# Dendrogram plotting
-plt.figure(figsize=(15, 4))
-ax = plt.subplot()
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
 
-ddata = dendrogram(Z)
+conf_matrix = confusion_matrix(y_test, y_pred)
+print("\nConfusion Matrix:\n", conf_matrix)
 
-dcoord = np.array(ddata["dcoord"])
-icoord = np.array(ddata["icoord"])
-leaves = np.array(ddata["leaves"])
-idx = np.argsort(dcoord[:, 2])
-dcoord = dcoord[idx, :]
-icoord = icoord[idx, :]
-idx = np.argsort(Z[:, :2].ravel())
-label_pos = icoord[:, 1:3].ravel()[idx][:30]
+def plot_random_predictions():
+    indices = np.random.choice(range(len(X_test)), size=20, replace=False)
+    fig, axes = plt.subplots(4, 5, figsize=(10, 8))
+    axes = axes.flatten()
+    for ax, idx in zip(axes, indices):
+        ax.set_axis_off()
+        ax.imshow(X_test[idx].reshape(8, 8), cmap=plt.cm.gray_r, interpolation="nearest")
+        ax.set_title(f"Pred: {y_pred[idx]}")
+    plt.tight_layout()
+    plt.show()
 
-from matplotlib.offsetbox import OffsetImage, AnnotationBbox
-for i in range(30):
-    imagebox = OffsetImage(images[i], cmap=plt.cm.bone_r, interpolation="bilinear", zoom=3)
-    ab = AnnotationBbox(imagebox, (label_pos[i], 0), box_alignment=(0.5, -0.1),
-                        bboxprops={"edgecolor": "none"})
-    ax.add_artist(ab)
-
-plt.show()
+plot_random_predictions()
