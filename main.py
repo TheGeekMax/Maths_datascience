@@ -1,38 +1,58 @@
-import matplotlib.pyplot as plt
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
-from sklearn.svm import SVC
-from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+import matplotlib.pyplot as plt
 import numpy as np
 
 digits = datasets.load_digits()
+X = digits.data
+y = digits.target
 
-X_train, X_test, y_train, y_test = train_test_split(
-    digits.data, digits.target, test_size=0.2, random_state=42
-)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=42)
 
-# Initialiser le classifieur SVC (One-vs-One)
-classifier = SVC(gamma=0.001, C=100.)
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
-classifier.fit(X_train, y_train)
+log_reg = LogisticRegression(max_iter=10000)
 
-y_pred = classifier.predict(X_test)
+log_reg.fit(X_train, y_train)
 
-print("Accuracy:", accuracy_score(y_test, y_pred))
-print("\nClassification Report:\n", classification_report(y_test, y_pred))
+y_pred = log_reg.predict(X_test)
+
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Accuracy: {accuracy:.4f}")
 
 conf_matrix = confusion_matrix(y_test, y_pred)
-print("\nConfusion Matrix:\n", conf_matrix)
+print("Confusion Matrix:")
+print(conf_matrix)
+print(classification_report(y_test, y_pred))
 
-def plot_random_predictions():
-    indices = np.random.choice(range(len(X_test)), size=20, replace=False)
-    fig, axes = plt.subplots(4, 5, figsize=(10, 8))
-    axes = axes.flatten()
-    for ax, idx in zip(axes, indices):
-        ax.set_axis_off()
-        ax.imshow(X_test[idx].reshape(8, 8), cmap=plt.cm.gray_r, interpolation="nearest")
-        ax.set_title(f"Pred: {y_pred[idx]}")
-    plt.tight_layout()
-    plt.show()
+#afficher quelques prédictions correctes et incorrects
 
-plot_random_predictions()
+correct_indices = np.where(y_pred == y_test)[0]
+incorrect_indices = np.where(y_pred != y_test)[0]
+
+np.random.shuffle(correct_indices)
+np.random.shuffle(incorrect_indices)
+
+random_correct_indices = correct_indices[:5]
+random_incorrect_indices = incorrect_indices[:5]
+
+plt.figure(figsize=(10, 5))
+for i, index in enumerate(random_correct_indices):
+    plt.subplot(2, 5, i + 1)
+    plt.imshow(X_test[index].reshape(8, 8), cmap=plt.cm.gray)
+    plt.title(f'Pred: {y_pred[index]} | True: {y_test[index]}', color='green')
+    plt.axis('off')
+
+for i, index in enumerate(random_incorrect_indices):
+    plt.subplot(2, 5, i + 6)
+    plt.imshow(X_test[index].reshape(8, 8), cmap=plt.cm.gray)
+    plt.title(f'Pred: {y_pred[index]} | True: {y_test[index]}', color='red')
+    plt.axis('off')
+
+plt.tight_layout()
+plt.show()
